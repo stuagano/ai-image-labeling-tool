@@ -1,0 +1,49 @@
+{
+  "info": {
+    "description": "Example COCO format annotations",
+    "url": "",
+    "version": "1.0",
+    "year": 2024,
+    "contributor": "",
+    "date_created": "2024-01-01T00:00:00"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "example.jpg",
+      "width": 800,
+      "height": 600
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [100, 50, 200, 150],
+      "area": 30000,
+      "iscrowd": 0
+    },
+    {
+      "id": 2,
+      "image_id": 1,
+      "category_id": 2,
+      "bbox": [350, 100, 180, 120],
+      "area": 21600,
+      "iscrowd": 0
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "dog",
+      "supercategory": "animal"
+    },
+    {
+      "id": 2,
+      "name": "cat",
+      "supercategory": "animal"
+    }
+  ]
+} 

@@ -1,0 +1,11 @@
+streamlit
+pillow
+numpy
+google-generativeai
+python-dotenv
+opencv-python
+ultralytics
+torch
+torchvision
+transformers
+requests

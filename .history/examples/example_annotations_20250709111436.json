@@ -1,0 +1,16 @@
+[
+  {
+    "left": 100,
+    "top": 50,
+    "width": 200,
+    "height": 150,
+    "label": "dog"
+  },
+  {
+    "left": 350,
+    "top": 100,
+    "width": 180,
+    "height": 120,
+    "label": "cat"
+  }
+] 
