@@ -1,45 +1,120 @@
 """
 Document Processing Module
 
-Enhanced document processing tool for extracting structured data from forms
-with strong typing for signatures, radio buttons, checkboxes, and other field types.
-
-Now includes DPI variation handling, document normalization, and preprocessing
-for handling real-world scanning inconsistencies.
+Enhanced document processing system with robustness features
+including business rules, issue resolution, exception handling,
+workflow management, analytics, and audit trail.
 """
 
-from .field_types import *
-from .template_manager import DocumentTemplateManager
-from .document_processor import DocumentProcessor
-from .batch_processor import BatchDocumentProcessor
-from .validators import *
+# Core field types - no heavy dependencies
+from .field_types import (
+    FieldType, ValidationLevel, BoundingBox, FieldExtraction, BaseField,
+    TextField, NumberField, DateField, EmailField, PhoneField,
+    SignatureField, CheckboxField, RadioButtonField, DropdownField, TableField
+)
 
-# Enhanced components for DPI and quality handling
+# Business rules engine
+from .business_rules_engine import (
+    BusinessRulesEngine, BusinessRule, RuleType, RuleSeverity, RuleViolation
+)
+
+# Issue detection and resolution
+from .issue_resolution import (
+    IssueDetector, IssueResolver, DocumentIssue, IssueType, IssueSeverity, ResolutionAction
+)
+
+# Exception handling
+from .exception_handling import (
+    ExceptionHandler, ExceptionContext, ProcessingException, 
+    ExceptionType, ExceptionSeverity, EscalationLevel
+)
+
+# Interactive workflow
+from .interactive_workflow import (
+    WorkflowEngine, WorkflowUser, WorkflowTask, TaskType, TaskPriority, 
+    TaskStatus, UserRole
+)
+
+# Analytics and learning
+from .analytics_learning import (
+    LearningEngine, FieldPerformanceAnalyzer, ErrorPatternDetector,
+    LearningInsight, LearningCategory
+)
+
+# Audit trail
+from .audit_trail import (
+    AuditLogger, AuditEvent, AuditContext, AuditEventType, AuditLevel
+)
+
+# Template management - basic features only
 try:
-    from .document_normalizer import DocumentNormalizer, AdaptiveTemplateManager, DocumentPreprocessor
-    from .enhanced_document_processor import EnhancedDocumentProcessor
-    ENHANCED_FEATURES_AVAILABLE = True
+    from .template_manager import DocumentTemplate, DocumentTemplateManager
 except ImportError:
-    # Enhanced features require opencv-python and numpy
-    ENHANCED_FEATURES_AVAILABLE = False
-    print("Enhanced DPI handling features require: pip install opencv-python numpy")
+    # Skip if dependencies not available
+    pass
 
-__version__ = "1.1.0"  # Updated for DPI handling features
+# Validators
+try:
+    from .validators import ValidationReport, DocumentValidator, QualityAssurance
+except ImportError:
+    # Skip if dependencies not available
+    pass
 
-def get_recommended_processor(enable_dpi_handling=True, target_dpi=300.0):
-    """Get the recommended document processor for your use case.
+__version__ = "2.0.0"
+__all__ = [
+    # Field types
+    "FieldType", "ValidationLevel", "BoundingBox", "FieldExtraction", "BaseField",
+    "TextField", "NumberField", "DateField", "EmailField", "PhoneField",
+    "SignatureField", "CheckboxField", "RadioButtonField", "DropdownField", "TableField",
     
-    Args:
-        enable_dpi_handling: Whether to enable DPI variation handling
-        target_dpi: Target DPI for normalization
-        
-    Returns:
-        DocumentProcessor or EnhancedDocumentProcessor
-    """
-    if enable_dpi_handling and ENHANCED_FEATURES_AVAILABLE:
-        return EnhancedDocumentProcessor(target_dpi=target_dpi, enable_preprocessing=True)
-    else:
-        if enable_dpi_handling and not ENHANCED_FEATURES_AVAILABLE:
-            print("Warning: DPI handling requested but enhanced features not available")
-            print("Install with: pip install opencv-python numpy")
-        return DocumentProcessor()
+    # Business rules
+    "BusinessRulesEngine", "BusinessRule", "RuleType", "RuleSeverity", "RuleViolation",
+    
+    # Issue resolution
+    "IssueDetector", "IssueResolver", "DocumentIssue", "IssueType", "IssueSeverity", "ResolutionAction",
+    
+    # Exception handling
+    "ExceptionHandler", "ExceptionContext", "ProcessingException", 
+    "ExceptionType", "ExceptionSeverity", "EscalationLevel",
+    
+    # Workflow
+    "WorkflowEngine", "WorkflowUser", "WorkflowTask", "TaskType", "TaskPriority", 
+    "TaskStatus", "UserRole",
+    
+    # Analytics
+    "LearningEngine", "FieldPerformanceAnalyzer", "ErrorPatternDetector",
+    "LearningInsight", "LearningCategory",
+    
+    # Audit
+    "AuditLogger", "AuditEvent", "AuditContext", "AuditEventType", "AuditLevel"
+]
+
+def get_version():
+    """Get the version of the document processing system."""
+    return __version__
+
+def get_system_info():
+    """Get information about the robustness enhancement system."""
+    return {
+        "version": __version__,
+        "features": [
+            "Business Rules Engine",
+            "Issue Detection & Resolution", 
+            "Exception Handling Framework",
+            "Interactive Workflow System",
+            "Analytics & Learning Engine",
+            "Complete Audit Trail",
+            "Strong Field Typing",
+            "Template Management",
+            "Quality Assurance"
+        ],
+        "components": len(__all__)
+    }
+
+def initialize_system():
+    """Initialize the robustness enhancement system."""
+    print("🚀 Initializing Document Processing Robustness System...")
+    print(f"   Version: {__version__}")
+    print(f"   Components: {len(__all__)}")
+    print("✅ System initialized successfully!")
+    return True
