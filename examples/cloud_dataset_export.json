@@ -1,0 +1,241 @@
+{
+  "info": {
+    "description": "AI Image Labeling Dataset - Cloud Export",
+    "version": "1.0",
+    "date_created": "2023-12-01T18:00:00.000000",
+    "contributor": "AI Image Labeler Cloud",
+    "url": "https://your-cloud-run-service.com",
+    "total_images": 4,
+    "total_annotations": 13
+  },
+  "licenses": [
+    {
+      "id": 1,
+      "name": "MIT License",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "person",
+      "supercategory": "person"
+    },
+    {
+      "id": 2,
+      "name": "car",
+      "supercategory": "vehicle"
+    },
+    {
+      "id": 3,
+      "name": "dog",
+      "supercategory": "animal"
+    },
+    {
+      "id": 4,
+      "name": "cat",
+      "supercategory": "animal"
+    },
+    {
+      "id": 5,
+      "name": "bicycle",
+      "supercategory": "vehicle"
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "street_scene_001.jpg",
+      "image_id": "a1b2c3d4e5f678901234567890123456",
+      "width": 1920,
+      "height": 1080,
+      "license": 1,
+      "date_captured": "2023-12-01T14:30:22.123456"
+    },
+    {
+      "id": 2,
+      "file_name": "park_scene_002.jpg",
+      "image_id": "b2c3d4e5f67890123456789012345678",
+      "width": 1024,
+      "height": 768,
+      "license": 1,
+      "date_captured": "2023-12-01T15:45:33.789012"
+    },
+    {
+      "id": 3,
+      "file_name": "office_building_003.jpg",
+      "image_id": "c3d4e5f6789012345678901234567890",
+      "width": 1280,
+      "height": 720,
+      "license": 1,
+      "date_captured": "2023-12-01T16:20:15.456789"
+    },
+    {
+      "id": 4,
+      "file_name": "city_street_004.jpg",
+      "image_id": "d4e5f678901234567890123456789012",
+      "width": 1920,
+      "height": 1080,
+      "license": 1,
+      "date_captured": "2023-12-01T17:10:45.123456"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [150.5, 200.3, 120.8, 180.2],
+      "area": 21768.16,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.87,
+      "ai_detected": true
+    },
+    {
+      "id": 2,
+      "image_id": 1,
+      "category_id": 2,
+      "bbox": [450.0, 300.0, 200.0, 150.0],
+      "area": 30000.0,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.92,
+      "ai_detected": true
+    },
+    {
+      "id": 3,
+      "image_id": 1,
+      "category_id": 3,
+      "bbox": [50.0, 100.0, 80.0, 60.0],
+      "area": 4800.0,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.78,
+      "ai_detected": true
+    },
+    {
+      "id": 4,
+      "image_id": 2,
+      "category_id": 1,
+      "bbox": [245.2, 156.8, 89.5, 234.1],
+      "area": 20950.45,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.87,
+      "ai_detected": true
+    },
+    {
+      "id": 5,
+      "image_id": 2,
+      "category_id": 2,
+      "bbox": [567.3, 289.4, 156.7, 98.2],
+      "area": 15387.94,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.92,
+      "ai_detected": true
+    },
+    {
+      "id": 6,
+      "image_id": 2,
+      "category_id": 3,
+      "bbox": [123.8, 445.6, 67.3, 45.9],
+      "area": 3089.07,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.78,
+      "ai_detected": true
+    },
+    {
+      "id": 7,
+      "image_id": 2,
+      "category_id": 4,
+      "bbox": [789.1, 234.7, 45.2, 67.8],
+      "area": 3064.56,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.65,
+      "ai_detected": true
+    },
+    {
+      "id": 8,
+      "image_id": 3,
+      "category_id": 1,
+      "bbox": [320.0, 180.0, 95.0, 220.0],
+      "area": 20900.0,
+      "segmentation": [],
+      "iscrowd": 0,
+      "manual_annotation": true,
+      "annotator": "user_123"
+    },
+    {
+      "id": 9,
+      "image_id": 3,
+      "category_id": 2,
+      "bbox": [650.0, 250.0, 180.0, 120.0],
+      "area": 21600.0,
+      "segmentation": [],
+      "iscrowd": 0,
+      "manual_annotation": true,
+      "annotator": "user_123"
+    },
+    {
+      "id": 10,
+      "image_id": 3,
+      "category_id": 3,
+      "bbox": [150.0, 400.0, 60.0, 40.0],
+      "area": 2400.0,
+      "segmentation": [],
+      "iscrowd": 0,
+      "manual_annotation": true,
+      "annotator": "user_123"
+    },
+    {
+      "id": 11,
+      "image_id": 4,
+      "category_id": 1,
+      "bbox": [245.2, 156.8, 89.5, 234.1],
+      "area": 20950.45,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.87,
+      "ai_detected": true
+    },
+    {
+      "id": 12,
+      "image_id": 4,
+      "category_id": 2,
+      "bbox": [567.3, 289.4, 156.7, 98.2],
+      "area": 15387.94,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.92,
+      "ai_detected": true,
+      "manually_refined": true
+    },
+    {
+      "id": 13,
+      "image_id": 4,
+      "category_id": 3,
+      "bbox": [123.8, 445.6, 67.3, 45.9],
+      "area": 3089.07,
+      "segmentation": [],
+      "iscrowd": 0,
+      "confidence": 0.78,
+      "ai_detected": true
+    },
+    {
+      "id": 14,
+      "image_id": 4,
+      "category_id": 5,
+      "bbox": [800.0, 300.0, 120.0, 80.0],
+      "area": 9600.0,
+      "segmentation": [],
+      "iscrowd": 0,
+      "ai_detected": false,
+      "manual_annotation": true,
+      "annotator": "user_123"
+    }
+  ]
+} 

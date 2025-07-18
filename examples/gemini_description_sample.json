@@ -1,0 +1,27 @@
+{
+  "image_name": "street_scene_001.jpg",
+  "description": "This image shows a busy urban street scene with multiple people walking on a sidewalk. In the foreground, there are three people: a woman in a red coat walking towards the camera, a man in a blue jacket standing and looking at his phone, and another person partially visible on the right side. The background shows a city street with cars parked along the curb and several buildings with storefronts. There's a traffic light visible in the upper left portion of the image. The scene appears to be during daylight hours with good lighting. The sidewalk is concrete and the street has visible lane markings. This appears to be a typical urban environment with pedestrian and vehicular traffic.",
+  "timestamp": "2023-12-01T14:30:22.123456",
+  "source": "gemini",
+  "metadata": {
+    "model": "gemini-pro-vision",
+    "description_type": "detailed_scene_analysis",
+    "confidence": "high",
+    "objects_detected": [
+      "person",
+      "car",
+      "building",
+      "traffic_light",
+      "sidewalk",
+      "street"
+    ],
+    "activities_observed": [
+      "walking",
+      "standing",
+      "using_phone"
+    ],
+    "scene_type": "urban_street",
+    "lighting": "daylight",
+    "weather": "clear"
+  }
+} 

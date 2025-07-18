@@ -1,0 +1,50 @@
+{
+  "rects": [
+    {
+      "left": 320.0,
+      "top": 180.0,
+      "width": 95.0,
+      "height": 220.0,
+      "label": "person",
+      "manual_annotation": true,
+      "annotator": "user_123"
+    },
+    {
+      "left": 650.0,
+      "top": 250.0,
+      "width": 180.0,
+      "height": 120.0,
+      "label": "car",
+      "manual_annotation": true,
+      "annotator": "user_123"
+    },
+    {
+      "left": 150.0,
+      "top": 400.0,
+      "width": 60.0,
+      "height": 40.0,
+      "label": "dog",
+      "manual_annotation": true,
+      "annotator": "user_123"
+    }
+  ],
+  "image_path": "office_building_003.jpg",
+  "image_width": 1280,
+  "image_height": 720,
+  "labels": ["person", "car", "dog", "building", "tree"],
+  "format": "json",
+  "metadata": {
+    "image_path": "office_building_003.jpg",
+    "image_id": "c3d4e5f6789012345678901234567890",
+    "saved_at": "2023-12-01T16:20:15.456789",
+    "version": "1.0",
+    "ai_model_used": "none",
+    "confidence_threshold": 0.0,
+    "total_annotations": 3,
+    "ai_annotations": 0,
+    "manual_annotations": 3,
+    "processing_time_ms": 0,
+    "annotation_session_duration": 180,
+    "quality_score": 0.95
+  }
+} 

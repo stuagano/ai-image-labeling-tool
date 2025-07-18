@@ -1,0 +1,40 @@
+{
+  "rects": [
+    {
+      "left": 150.5,
+      "top": 200.3,
+      "width": 120.8,
+      "height": 180.2,
+      "label": "person"
+    },
+    {
+      "left": 450.0,
+      "top": 300.0,
+      "width": 200.0,
+      "height": 150.0,
+      "label": "car"
+    },
+    {
+      "left": 50.0,
+      "top": 100.0,
+      "width": 80.0,
+      "height": 60.0,
+      "label": "dog"
+    }
+  ],
+  "image_path": "street_scene_001.jpg",
+  "image_width": 1920,
+  "image_height": 1080,
+  "labels": ["person", "car", "dog", "cat", "bicycle"],
+  "format": "json",
+  "metadata": {
+    "image_path": "street_scene_001.jpg",
+    "image_id": "a1b2c3d4e5f678901234567890123456",
+    "saved_at": "2023-12-01T14:30:22.123456",
+    "version": "1.0",
+    "ai_model_used": "yolo",
+    "confidence_threshold": 0.5,
+    "total_annotations": 3,
+    "processing_time_ms": 1250
+  }
+} 

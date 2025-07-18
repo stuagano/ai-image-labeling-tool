@@ -1,0 +1,59 @@
+{
+  "rects": [
+    {
+      "left": 245.2,
+      "top": 156.8,
+      "width": 89.5,
+      "height": 234.1,
+      "label": "person",
+      "confidence": 0.87,
+      "ai_detected": true
+    },
+    {
+      "left": 567.3,
+      "top": 289.4,
+      "width": 156.7,
+      "height": 98.2,
+      "label": "car",
+      "confidence": 0.92,
+      "ai_detected": true
+    },
+    {
+      "left": 123.8,
+      "top": 445.6,
+      "width": 67.3,
+      "height": 45.9,
+      "label": "dog",
+      "confidence": 0.78,
+      "ai_detected": true
+    },
+    {
+      "left": 789.1,
+      "top": 234.7,
+      "width": 45.2,
+      "height": 67.8,
+      "label": "cat",
+      "confidence": 0.65,
+      "ai_detected": true
+    }
+  ],
+  "image_path": "park_scene_002.jpg",
+  "image_width": 1024,
+  "image_height": 768,
+  "labels": ["person", "car", "dog", "cat", "bicycle", "bench"],
+  "format": "json",
+  "metadata": {
+    "image_path": "park_scene_002.jpg",
+    "image_id": "b2c3d4e5f67890123456789012345678",
+    "saved_at": "2023-12-01T15:45:33.789012",
+    "version": "1.0",
+    "ai_model_used": "transformers",
+    "confidence_threshold": 0.6,
+    "total_annotations": 4,
+    "ai_annotations": 4,
+    "manual_annotations": 0,
+    "processing_time_ms": 2340,
+    "model_version": "detr-resnet-50",
+    "detection_quality": "high"
+  }
+} 

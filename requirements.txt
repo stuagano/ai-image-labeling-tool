@@ -10,3 +10,11 @@ torchvision
 transformers
 requests
 tqdm
+google-cloud-storage
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+fastapi
+uvicorn
+requests
+python-multipart
