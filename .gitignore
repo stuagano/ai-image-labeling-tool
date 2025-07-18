@@ -67,4 +67,11 @@ logs/
 
 # API keys (if stored locally)
 api_keys.txt
-secrets.json 
+secrets.json
+
+# Local storage and development files
+local_annotations/
+.history/
+
+# Streamlit
+.streamlit/ 
