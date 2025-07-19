@@ -9,8 +9,9 @@ import datetime
 import hashlib
 from typing import List, Dict, Any, Optional
 from pathlib import Path
+from core.storage_interface import StorageManagerInterface, BaseImageManager, StorageUtilities
 
-class LocalStorageManager:
+class LocalStorageManager(StorageManagerInterface):
     """Manages local file storage for annotations"""
     
     def __init__(self, base_dir: str = "local_annotations"):
@@ -20,6 +21,7 @@ class LocalStorageManager:
         Args:
             base_dir: Base directory for storing annotations
         """
+        super().__init__()
         self.base_dir = Path(base_dir)
         self.annotations_dir = self.base_dir / "annotations"
         self.descriptions_dir = self.base_dir / "descriptions"
@@ -177,8 +179,37 @@ class LocalStorageManager:
         except Exception as e:
             print(f"Failed to delete file {file_path}: {e}")
             return False
+    
+    def file_exists(self, file_path: str) -> bool:
+        """
+        Check if file exists in storage
+        
+        Args:
+            file_path: Relative path within storage directory
+            
+        Returns:
+            True if file exists, False otherwise
+        """
+        try:
+            # Determine which directory to use based on file path
+            if file_path.startswith("annotations/"):
+                full_path = self.annotations_dir / file_path.replace("annotations/", "")
+            elif file_path.startswith("descriptions/"):
+                full_path = self.descriptions_dir / file_path.replace("descriptions/", "")
+            elif file_path.startswith("exports/"):
+                full_path = self.exports_dir / file_path.replace("exports/", "")
+            elif file_path.startswith("uploads/"):
+                full_path = self.uploads_dir / file_path.replace("uploads/", "")
+            else:
+                full_path = self.base_dir / file_path
+            
+            return full_path.exists() and full_path.is_file()
+            
+        except Exception as e:
+            print(f"Failed to check file existence {file_path}: {e}")
+            return False
 
-class LocalImageManager:
+class LocalImageManager(BaseImageManager):
     """Manages image annotations using local storage"""
     
     def __init__(self, storage: LocalStorageManager):
@@ -188,16 +219,16 @@ class LocalImageManager:
         Args:
             storage: Local storage manager instance
         """
-        self.storage = storage
+        super().__init__(storage)
         self.base_path = "annotations"
     
-    def save_annotation(self, image_path: str, annotation_data: Dict[str, Any]) -> bool:
+    def save_annotation(self, image_path: str, annotations: List[Dict[str, Any]]) -> bool:
         """
         Save annotation data for an image
         
         Args:
             image_path: Path or identifier for the image
-            annotation_data: Annotation data to save
+            annotations: List of annotation dictionaries
             
         Returns:
             True if successful, False otherwise
@@ -206,17 +237,20 @@ class LocalImageManager:
         image_id = self._generate_image_id(image_path)
         file_path = f"{self.base_path}/{image_id}.json"
         
-        # Add metadata
-        annotation_data['metadata'] = {
-            'image_path': image_path,
-            'image_id': image_id,
-            'saved_at': str(datetime.datetime.now()),
-            'version': '1.0'
+        # Prepare annotation data
+        annotation_data = {
+            'annotations': annotations,
+            'metadata': {
+                'image_path': image_path,
+                'image_id': image_id,
+                'saved_at': str(datetime.datetime.now()),
+                'version': '1.0'
+            }
         }
         
         return self.storage.upload_json(annotation_data, file_path)
     
-    def load_annotation(self, image_path: str) -> Optional[Dict[str, Any]]:
+    def load_annotation(self, image_path: str) -> Optional[List[Dict[str, Any]]]:
         """
         Load annotation data for an image
         
@@ -224,13 +258,16 @@ class LocalImageManager:
             image_path: Path or identifier for the image
             
         Returns:
-            Annotation data if found, None otherwise
+            List of annotations if found, None otherwise
         """
         # Try to find annotation by image path
         image_id = self._generate_image_id(image_path)
         file_path = f"{self.base_path}/{image_id}.json"
         
-        return self.storage.download_json(file_path)
+        data = self.storage.download_json(file_path)
+        if data:
+            return data.get('annotations', [])
+        return None
     
     def delete_annotation(self, image_path: str) -> bool:
         """

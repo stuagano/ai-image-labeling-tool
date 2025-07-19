@@ -71,27 +71,8 @@ class AIImageManager(BaseImageManager):
     
     def _calculate_iou(self, bbox1: Dict[str, Any], bbox2: Dict[str, Any]) -> float:
         """Calculate Intersection over Union between two bounding boxes"""
-        x1_1, y1_1 = bbox1['left'], bbox1['top']
-        x2_1, y2_1 = x1_1 + bbox1['width'], y1_1 + bbox1['height']
-        
-        x1_2, y1_2 = bbox2['left'], bbox2['top']
-        x2_2, y2_2 = x1_2 + bbox2['width'], y1_2 + bbox2['height']
-        
-        # Calculate intersection
-        x1_i = max(x1_1, x1_2)
-        y1_i = max(y1_1, y1_2)
-        x2_i = min(x2_1, x2_2)
-        y2_i = min(y2_1, y2_2)
-        
-        if x2_i <= x1_i or y2_i <= y1_i:
-            return 0.0
-        
-        intersection = (x2_i - x1_i) * (y2_i - y1_i)
-        area1 = bbox1['width'] * bbox1['height']
-        area2 = bbox2['width'] * bbox2['height']
-        union = area1 + area2 - intersection
-        
-        return intersection / union if union > 0 else 0.0
+        from core.math_utils import BoundingBoxUtils
+        return BoundingBoxUtils.calculate_iou(bbox1, bbox2)
     
     def get_annotations_with_source(self) -> List[Dict[str, Any]]:
         """Get all annotations with their source (manual or AI)"""
