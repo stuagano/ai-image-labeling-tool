@@ -6,12 +6,14 @@ Handles JSON file persistence in Google Cloud Storage
 import os
 import json
 import tempfile
+import datetime
 from typing import Dict, List, Optional, Any
 from google.cloud import storage
 from google.cloud.exceptions import NotFound
 import streamlit as st
+from core.storage_interface import StorageManagerInterface, BaseImageManager, StorageUtilities
 
-class CloudStorageManager:
+class CloudStorageManager(StorageManagerInterface):
     """Manages file operations with Google Cloud Storage"""
     
     def __init__(self, bucket_name: str = None, project_id: str = None):
@@ -22,6 +24,7 @@ class CloudStorageManager:
             bucket_name: GCS bucket name (defaults to environment variable)
             project_id: GCP project ID (defaults to environment variable)
         """
+        super().__init__()
         self.bucket_name = bucket_name or os.getenv('GCS_BUCKET_NAME')
         self.project_id = project_id or os.getenv('GOOGLE_CLOUD_PROJECT')
         
@@ -191,7 +194,7 @@ class CloudStorageManager:
             st.error(f"Failed to get public URL: {e}")
             return None
 
-class CloudImageManager:
+class CloudImageManager(BaseImageManager):
     """Enhanced image manager with cloud storage support"""
     
     def __init__(self, storage_manager: CloudStorageManager, base_path: str = "annotations"):
@@ -202,34 +205,56 @@ class CloudImageManager:
             storage_manager: CloudStorageManager instance
             base_path: Base path for annotations in storage
         """
-        self.storage = storage_manager
+        super().__init__(storage_manager)
         self.base_path = base_path
     
-    def save_annotation(self, image_path: str, annotation_data: Dict[str, Any]) -> bool:
+    def save_annotation(self, image_path: str, annotations: List[Dict[str, Any]]) -> bool:
         """
         Save annotation data for an image
         
         Args:
             image_path: Path or identifier for the image
-            annotation_data: Annotation data to save
+            annotations: List of annotation dictionaries
             
         Returns:
             True if successful, False otherwise
         """
         # Create a unique identifier from the image path
-        # This could be a hash, UUID, or sanitized path
         image_id = self._generate_image_id(image_path)
         file_path = f"{self.base_path}/{image_id}.json"
         
-        # Add metadata
-        annotation_data['metadata'] = {
-            'image_path': image_path,
-            'image_id': image_id,
-            'saved_at': str(datetime.datetime.now()),
-            'version': '1.0'
+        # Prepare annotation data
+        annotation_data = {
+            'annotations': annotations,
+            'metadata': {
+                'image_path': image_path,
+                'image_id': image_id,
+                'saved_at': str(datetime.datetime.now()),
+                'version': '1.0'
+            }
         }
         
         return self.storage.upload_json(annotation_data, file_path)
+    
+    def load_annotation(self, image_path: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Load annotation data for an image
+        
+        Args:
+            image_path: Path or identifier for the image
+            
+        Returns:
+            List of annotations if found, None otherwise
+        """
+        # Generate the same ID used for saving
+        image_id = self._generate_image_id(image_path)
+        file_path = f"{self.base_path}/{image_id}.json"
+        
+        # Load annotation data
+        data = self.storage.download_json(file_path)
+        if data:
+            return data.get('annotations', [])
+        return None
     
     def _generate_image_id(self, image_path: str) -> str:
         """

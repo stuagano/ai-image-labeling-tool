@@ -308,30 +308,8 @@ class AILabelingAssistant:
     
     def _calculate_iou(self, bbox1: List[int], bbox2: List[int]) -> float:
         """Calculate Intersection over Union between two bounding boxes"""
-        if len(bbox1) != 4 or len(bbox2) != 4:
-            return 0.0
-        
-        x1_1, y1_1, w1, h1 = bbox1
-        x2_1, y2_1 = x1_1 + w1, y1_1 + h1
-        
-        x1_2, y1_2, w2, h2 = bbox2
-        x2_2, y2_2 = x1_2 + w2, y1_2 + h2
-        
-        # Calculate intersection
-        x1_i = max(x1_1, x1_2)
-        y1_i = max(y1_1, y1_2)
-        x2_i = min(x2_1, x2_2)
-        y2_i = min(y2_1, y2_2)
-        
-        if x2_i <= x1_i or y2_i <= y1_i:
-            return 0.0
-        
-        intersection = (x2_i - x1_i) * (y2_i - y1_i)
-        area1 = w1 * h1
-        area2 = w2 * h2
-        union = area1 + area2 - intersection
-        
-        return intersection / union if union > 0 else 0.0
+        from core.math_utils import BoundingBoxUtils
+        return BoundingBoxUtils.calculate_iou(bbox1, bbox2)
 
 def create_ai_detector(model_type: str = "yolo", api_key: str = None) -> AIObjectDetector:
     """Factory function to create AI detector"""
