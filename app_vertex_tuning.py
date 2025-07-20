@@ -100,81 +100,231 @@ def initialize_session_state():
         st.session_state.models = []
     if 'endpoints' not in st.session_state:
         st.session_state.endpoints = []
+    if 'gcp_authenticated' not in st.session_state:
+        st.session_state.gcp_authenticated = False
+    if 'gcp_project_id' not in st.session_state:
+        st.session_state.gcp_project_id = None
+    if 'gcp_location' not in st.session_state:
+        st.session_state.gcp_location = "us-central1"
+    if 'gcp_bucket_name' not in st.session_state:
+        st.session_state.gcp_bucket_name = None
 
-def setup_vertex_connection():
-    """Setup Vertex AI connection."""
-    st.markdown('<div class="section-header">🔧 Vertex AI Configuration</div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
+def setup_gcp_sidebar():
+    """Setup GCP authentication and configuration in the sidebar."""
+    with st.sidebar:
+        st.markdown("## 🔧 GCP Configuration")
+        
+        # Authentication status
+        if st.session_state.gcp_authenticated:
+            st.success("✅ Authenticated to GCP")
+            st.info(f"**Project:** {st.session_state.gcp_project_id}")
+            st.info(f"**Region:** {st.session_state.gcp_location}")
+            if st.session_state.gcp_bucket_name:
+                st.info(f"**Bucket:** {st.session_state.gcp_bucket_name}")
+        else:
+            st.warning("⚠️ Not authenticated to GCP")
+        
+        st.markdown("---")
+        
+        # Project configuration
         project_id = st.text_input(
             "Google Cloud Project ID",
-            value=os.getenv("GOOGLE_CLOUD_PROJECT", ""),
+            value=st.session_state.gcp_project_id or os.getenv("GOOGLE_CLOUD_PROJECT", ""),
             help="Your Google Cloud project ID"
         )
         
         location = st.selectbox(
             "Vertex AI Region",
             ["us-central1", "us-east1", "us-west1", "europe-west1", "asia-northeast1"],
-            index=0,
+            index=["us-central1", "us-east1", "us-west1", "europe-west1", "asia-northeast1"].index(
+                st.session_state.gcp_location
+            ),
             help="Region where Vertex AI resources will be created"
         )
-    
-    with col2:
+        
         bucket_name = st.text_input(
             "Cloud Storage Bucket",
-            value=os.getenv("GCS_BUCKET_NAME", ""),
+            value=st.session_state.gcp_bucket_name or os.getenv("GCS_BUCKET_NAME", ""),
             help="GCS bucket for storing datasets and models"
         )
         
-        api_key = st.text_input(
-            "Google API Key (optional)",
-            value=os.getenv("GOOGLE_API_KEY", ""),
-            type="password",
-            help="API key for additional Google services"
-        )
-    
-    if st.button("🔗 Connect to Vertex AI", type="primary"):
-        if not project_id:
-            st.error("Please enter a Google Cloud Project ID")
-            return False
+        # Authentication methods
+        st.markdown("### 🔐 Authentication")
         
-        try:
-            with st.spinner("Connecting to Vertex AI..."):
-                vertex_manager = VertexTuningManager(project_id, location)
-                
-                if bucket_name:
-                    vertex_manager.set_storage_bucket(bucket_name)
-                
-                st.session_state.vertex_manager = vertex_manager
-                
-                # Test connection by listing resources
-                jobs = vertex_manager.list_training_jobs()
-                models = vertex_manager.list_models()
-                endpoints = vertex_manager.list_endpoints()
-                
-                st.session_state.training_jobs = jobs
-                st.session_state.models = models
-                st.session_state.endpoints = endpoints
-                
-                st.success("✅ Successfully connected to Vertex AI!")
-                st.info(f"Found {len(jobs)} training jobs, {len(models)} models, and {len(endpoints)} endpoints")
-                
-        except Exception as e:
-            st.error(f"Failed to connect to Vertex AI: {e}")
-            return False
-    
-    return st.session_state.vertex_manager is not None
+        auth_method = st.radio(
+            "Choose authentication method:",
+            ["Service Account Key", "Application Default Credentials", "OAuth 2.0"],
+            help="Select how to authenticate with Google Cloud"
+        )
+        
+        if auth_method == "Service Account Key":
+            service_account_key = st.file_uploader(
+                "Upload Service Account JSON Key",
+                type=['json'],
+                help="Upload your service account key file"
+            )
+            
+            if service_account_key and st.button("🔑 Authenticate with Service Account", type="primary"):
+                try:
+                    with st.spinner("Authenticating with service account..."):
+                        # Save the uploaded key temporarily
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as tmp_file:
+                            tmp_file.write(service_account_key.getvalue())
+                            key_path = tmp_file.name
+                        
+                        # Set environment variable for authentication
+                        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = key_path
+                        
+                        # Test authentication by creating Vertex manager
+                        vertex_manager = VertexTuningManager(project_id, location)
+                        
+                        if bucket_name:
+                            vertex_manager.set_storage_bucket(bucket_name)
+                        
+                        # Test connection
+                        jobs = vertex_manager.list_training_jobs()
+                        models = vertex_manager.list_models()
+                        endpoints = vertex_manager.list_endpoints()
+                        
+                        # Store in session state
+                        st.session_state.vertex_manager = vertex_manager
+                        st.session_state.gcp_authenticated = True
+                        st.session_state.gcp_project_id = project_id
+                        st.session_state.gcp_location = location
+                        st.session_state.gcp_bucket_name = bucket_name
+                        st.session_state.training_jobs = jobs
+                        st.session_state.models = models
+                        st.session_state.endpoints = endpoints
+                        
+                        st.success("✅ Successfully authenticated!")
+                        st.rerun()
+                        
+                except Exception as e:
+                    st.error(f"Authentication failed: {e}")
+                    # Clean up temp file
+                    if 'key_path' in locals():
+                        os.unlink(key_path)
+        
+        elif auth_method == "Application Default Credentials":
+            st.info("Using Application Default Credentials (ADC)")
+            st.markdown("""
+            **Setup Instructions:**
+            1. Install gcloud CLI: `gcloud auth application-default login`
+            2. Or set GOOGLE_APPLICATION_CREDENTIALS environment variable
+            3. Ensure your account has proper permissions
+            """)
+            
+            if st.button("🔑 Authenticate with ADC", type="primary"):
+                try:
+                    with st.spinner("Authenticating with ADC..."):
+                        # Test authentication by creating Vertex manager
+                        vertex_manager = VertexTuningManager(project_id, location)
+                        
+                        if bucket_name:
+                            vertex_manager.set_storage_bucket(bucket_name)
+                        
+                        # Test connection
+                        jobs = vertex_manager.list_training_jobs()
+                        models = vertex_manager.list_models()
+                        endpoints = vertex_manager.list_endpoints()
+                        
+                        # Store in session state
+                        st.session_state.vertex_manager = vertex_manager
+                        st.session_state.gcp_authenticated = True
+                        st.session_state.gcp_project_id = project_id
+                        st.session_state.gcp_location = location
+                        st.session_state.gcp_bucket_name = bucket_name
+                        st.session_state.training_jobs = jobs
+                        st.session_state.models = models
+                        st.session_state.endpoints = endpoints
+                        
+                        st.success("✅ Successfully authenticated!")
+                        st.rerun()
+                        
+                except Exception as e:
+                    st.error(f"Authentication failed: {e}")
+        
+        elif auth_method == "OAuth 2.0":
+            st.info("OAuth 2.0 authentication")
+            st.markdown("""
+            **Setup Instructions:**
+            1. Configure OAuth 2.0 credentials in Google Cloud Console
+            2. Set up redirect URIs for your application
+            3. Use the client ID and secret for authentication
+            """)
+            
+            client_id = st.text_input("OAuth Client ID", type="password")
+            client_secret = st.text_input("OAuth Client Secret", type="password")
+            
+            if client_id and client_secret and st.button("🔑 Authenticate with OAuth", type="primary"):
+                st.info("OAuth 2.0 implementation requires additional setup")
+                st.warning("Please use Service Account or ADC for now")
+        
+        # Disconnect button
+        if st.session_state.gcp_authenticated:
+            st.markdown("---")
+            if st.button("🚪 Disconnect from GCP", type="secondary"):
+                st.session_state.gcp_authenticated = False
+                st.session_state.vertex_manager = None
+                st.session_state.gcp_project_id = None
+                st.session_state.gcp_bucket_name = None
+                st.session_state.training_jobs = []
+                st.session_state.models = []
+                st.session_state.endpoints = []
+                st.success("Disconnected from GCP")
+                st.rerun()
+        
+        # Project information
+        if st.session_state.gcp_authenticated:
+            st.markdown("---")
+            st.markdown("### 📊 Project Status")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Training Jobs", len(st.session_state.training_jobs))
+                st.metric("Models", len(st.session_state.models))
+            with col2:
+                st.metric("Endpoints", len(st.session_state.endpoints))
+                st.metric("Annotations", len(st.session_state.annotations))
+            
+            # Refresh button
+            if st.button("🔄 Refresh Status"):
+                try:
+                    jobs = st.session_state.vertex_manager.list_training_jobs()
+                    models = st.session_state.vertex_manager.list_models()
+                    endpoints = st.session_state.vertex_manager.list_endpoints()
+                    
+                    st.session_state.training_jobs = jobs
+                    st.session_state.models = models
+                    st.session_state.endpoints = endpoints
+                    
+                    st.success("Status refreshed!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to refresh: {e}")
+
+def check_gcp_authentication():
+    """Check if GCP is authenticated and return status."""
+    return st.session_state.gcp_authenticated and st.session_state.vertex_manager is not None
 
 def load_annotations():
     """Load annotations from storage."""
     st.markdown('<div class="section-header">📊 Load Annotations</div>', unsafe_allow_html=True)
     
-    # Initialize storage manager
+    # Check authentication
+    if not check_gcp_authentication():
+        st.warning("⚠️ Please authenticate to GCP first using the sidebar.")
+        return
+    
+    # Initialize storage manager based on authentication
     if st.session_state.storage_manager is None:
-        if os.getenv("GCS_BUCKET_NAME"):
-            st.session_state.storage_manager = CloudStorageManager()
+        if st.session_state.gcp_bucket_name:
+            try:
+                st.session_state.storage_manager = CloudStorageManager(st.session_state.gcp_bucket_name)
+            except Exception as e:
+                st.warning(f"Failed to initialize cloud storage: {e}")
+                st.session_state.storage_manager = LocalStorageManager()
         else:
             st.session_state.storage_manager = LocalStorageManager()
     
@@ -228,6 +378,11 @@ def load_annotations():
 def prepare_classification_dataset():
     """Prepare classification dataset from annotations."""
     st.markdown('<div class="section-header">🎯 Prepare Classification Dataset</div>', unsafe_allow_html=True)
+    
+    # Check authentication
+    if not check_gcp_authentication():
+        st.warning("⚠️ Please authenticate to GCP first using the sidebar.")
+        return
     
     if not st.session_state.annotations:
         st.warning("⚠️ No annotations available. Please load annotations first.")
@@ -352,6 +507,11 @@ def create_training_job():
     """Create a training job on Vertex AI."""
     st.markdown('<div class="section-header">🚀 Create Training Job</div>', unsafe_allow_html=True)
     
+    # Check authentication
+    if not check_gcp_authentication():
+        st.warning("⚠️ Please authenticate to GCP first using the sidebar.")
+        return
+    
     if not st.session_state.dataset_info:
         st.warning("⚠️ No dataset prepared. Please prepare a dataset first.")
         return
@@ -446,6 +606,11 @@ def manage_training_jobs():
     """Manage existing training jobs."""
     st.markdown('<div class="section-header">📋 Training Jobs</div>', unsafe_allow_html=True)
     
+    # Check authentication
+    if not check_gcp_authentication():
+        st.warning("⚠️ Please authenticate to GCP first using the sidebar.")
+        return
+    
     if not st.session_state.training_jobs:
         st.info("No training jobs found.")
         return
@@ -482,6 +647,11 @@ def manage_training_jobs():
 def manage_models():
     """Manage trained models."""
     st.markdown('<div class="section-header">🤖 Trained Models</div>', unsafe_allow_html=True)
+    
+    # Check authentication
+    if not check_gcp_authentication():
+        st.warning("⚠️ Please authenticate to GCP first using the sidebar.")
+        return
     
     if not st.session_state.models:
         st.info("No trained models found.")
@@ -523,6 +693,11 @@ def manage_models():
 def manage_endpoints():
     """Manage deployed endpoints."""
     st.markdown('<div class="section-header">🌐 Deployed Endpoints</div>', unsafe_allow_html=True)
+    
+    # Check authentication
+    if not check_gcp_authentication():
+        st.warning("⚠️ Please authenticate to GCP first using the sidebar.")
+        return
     
     if not st.session_state.endpoints:
         st.info("No deployed endpoints found.")
@@ -603,11 +778,52 @@ def main():
         """)
         return
     
-    # Setup Vertex AI connection
-    if not setup_vertex_connection():
-        st.stop()
+    # Setup GCP authentication in sidebar
+    setup_gcp_sidebar()
     
-    # Main workflow tabs
+    # Check authentication status
+    if not check_gcp_authentication():
+        st.markdown("""
+        <div class="warning-box">
+            <strong>⚠️ Authentication Required</strong><br>
+            Please authenticate to Google Cloud Platform using the sidebar configuration.
+            You need to provide your project ID, region, and authentication credentials.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Show authentication instructions
+        st.markdown("### 🔐 Authentication Instructions")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            **Method 1: Service Account Key**
+            1. Go to Google Cloud Console → IAM & Admin → Service Accounts
+            2. Create a new service account or select existing
+            3. Create and download a JSON key
+            4. Upload the key file in the sidebar
+            """)
+        
+        with col2:
+            st.markdown("""
+            **Method 2: Application Default Credentials**
+            1. Install gcloud CLI: `gcloud auth application-default login`
+            2. Or set GOOGLE_APPLICATION_CREDENTIALS environment variable
+            3. Ensure your account has proper permissions
+            """)
+        
+        st.markdown("### 📋 Required Permissions")
+        st.markdown("""
+        Your service account or user account needs these roles:
+        - `roles/aiplatform.admin` - Manage Vertex AI resources
+        - `roles/storage.admin` - Manage Cloud Storage
+        - `roles/iam.serviceAccountUser` - Use service accounts
+        """)
+        
+        return
+    
+    # Main workflow tabs (only shown when authenticated)
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📊 Load Data", 
         "🎯 Prepare Dataset", 
