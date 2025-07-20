@@ -19,7 +19,6 @@ try:
     from google.cloud import storage
     from google.cloud.aiplatform import Model
     from google.cloud.aiplatform import Endpoint
-    from google.cloud.aiplatform import TrainingJob
     VERTEX_AVAILABLE = True
 except ImportError:
     VERTEX_AVAILABLE = False
