@@ -566,7 +566,6 @@ def create_fine_tuning_tab():
 
 def run_integrated_app(img_dir, labels, annotation_format="json"):
     """Main integrated app function"""
-    st.set_option("deprecation.showfileUploaderEncoding", False)
     idm = ImageDirManager(img_dir, annotation_format)
 
     if "files" not in st.session_state:
