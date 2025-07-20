@@ -307,7 +307,7 @@ class VertexTuningManager:
     
     def deploy_model_to_endpoint(
         self,
-        model: Model,
+        model: "Model",
         endpoint_name: str,
         machine_type: str = "n1-standard-2"
     ) -> Dict[str, Any]:
@@ -393,7 +393,7 @@ class VertexTuningManager:
     
     def predict_with_endpoint(
         self,
-        endpoint: Endpoint,
+        endpoint: "Endpoint",
         image_path: str
     ) -> Dict[str, Any]:
         """
@@ -420,10 +420,10 @@ class VertexTuningManager:
             'confidence_scores': prediction.predictions[0] if prediction.predictions else []
         }
     
-    def delete_endpoint(self, endpoint: Endpoint):
+    def delete_endpoint(self, endpoint: "Endpoint"):
         """Delete a deployed endpoint."""
         endpoint.delete()
     
-    def delete_model(self, model: Model):
+    def delete_model(self, model: "Model"):
         """Delete a trained model."""
         model.delete() 
