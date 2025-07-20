@@ -67,7 +67,7 @@ def initialize_session_state():
         st.session_state.user_email = None
 
 def setup_gcp_authentication():
-    """Setup simplified GCP authentication with Google login and project selection"""
+    """Setup simplified GCP authentication: Google login first, then project selection"""
     st.sidebar.write("---")
     st.sidebar.write("**☁️ Google Cloud Setup**")
     
@@ -81,16 +81,95 @@ def setup_gcp_authentication():
             st.session_state.gcp_authenticated = False
             st.session_state.oauth_credentials = None
             st.session_state.user_email = None
+            st.session_state.gcp_project_id = None
+            st.session_state.gcp_region = None
             st.session_state.vertex_manager = None
             st.rerun()
         return True
     
-    # Simple Google login flow
+    # Step 1: Google Authentication
     if not OAUTH_AVAILABLE:
         st.sidebar.error("❌ OAuth not available. Install with: pip install google-auth-oauthlib")
         return False
     
-    st.sidebar.info("🔐 Sign in with your Google account to access Google Cloud")
+    if not st.session_state.oauth_credentials:
+        st.sidebar.write("**Step 1: Sign in with Google**")
+        st.sidebar.info("🔐 Click below to sign in with your Google account")
+        
+        if st.sidebar.button("🔐 Sign in with Google", type="primary"):
+            try:
+                with st.spinner("Opening Google sign-in..."):
+                    # Define OAuth scopes for Google Cloud
+                    SCOPES = [
+                        'https://www.googleapis.com/auth/cloud-platform',
+                        'https://www.googleapis.com/auth/cloud-platform.projects',
+                        'https://www.googleapis.com/auth/cloud-platform.read-only'
+                    ]
+                    
+                                    # Check for client_secrets.json
+                if not os.path.exists('client_secrets.json'):
+                    st.sidebar.error("❌ client_secrets.json not found")
+                    st.sidebar.info("📋 Setup instructions:")
+                    st.sidebar.write("1. Go to [Google Cloud Console](https://console.cloud.google.com)")
+                    st.sidebar.write("2. Navigate to APIs & Services > Credentials")
+                    st.sidebar.write("3. Create OAuth 2.0 Client ID")
+                    st.sidebar.write("4. Download client_secrets.json")
+                    st.sidebar.write("5. Place in project root")
+                    return False
+                
+                # Check if client_secrets.json has placeholder values
+                try:
+                    with open('client_secrets.json', 'r') as f:
+                        content = f.read()
+                        if 'YOUR_CLIENT_ID' in content or 'YOUR_CLIENT_SECRET' in content:
+                            st.sidebar.error("❌ client_secrets.json has placeholder values")
+                            st.sidebar.info("📋 You need to update client_secrets.json with your actual Google OAuth credentials")
+                            st.sidebar.write("**Quick Setup:**")
+                            st.sidebar.write("1. Go to [Google Cloud Console](https://console.cloud.google.com)")
+                            st.sidebar.write("2. Create a new project or select existing")
+                            st.sidebar.write("3. Enable Google Cloud APIs")
+                            st.sidebar.write("4. Go to APIs & Services > Credentials")
+                            st.sidebar.write("5. Create OAuth 2.0 Client ID (Desktop app)")
+                            st.sidebar.write("6. Download JSON and replace client_secrets.json")
+                            return False
+                except:
+                    st.sidebar.error("❌ Error reading client_secrets.json")
+                    return False
+                    
+                    # Create OAuth flow
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        'client_secrets.json',
+                        scopes=SCOPES
+                    )
+                    
+                    # Start OAuth flow (opens browser)
+                    credentials = flow.run_local_server(port=0)
+                    
+                    # Store credentials
+                    st.session_state.oauth_credentials = credentials
+                    
+                    # Get user email
+                    try:
+                        from google.oauth2.credentials import Credentials
+                        from googleapiclient.discovery import build
+                        service = build('oauth2', 'v2', credentials=credentials)
+                        user_info = service.userinfo().get().execute()
+                        st.session_state.user_email = user_info.get('email', 'Unknown')
+                    except:
+                        st.session_state.user_email = "Google User"
+                    
+                    st.sidebar.success(f"✅ Welcome, {st.session_state.user_email}!")
+                    st.rerun()
+                    
+            except Exception as e:
+                st.sidebar.error(f"❌ Sign-in failed: {e}")
+                st.sidebar.info("Make sure you have a valid client_secrets.json file")
+        
+        return False
+    
+    # Step 2: Project Selection (after Google auth)
+    st.sidebar.write("**Step 2: Select Google Cloud Project**")
+    st.sidebar.success(f"✅ Signed in as: {st.session_state.user_email}")
     
     # Project ID input
     project_id = st.sidebar.text_input(
@@ -108,78 +187,38 @@ def setup_gcp_authentication():
         help="Select your preferred GCP region"
     )
     
-    # Sign in button
-    if st.sidebar.button("🔐 Sign in with Google", type="primary"):
+    # Connect to Google Cloud
+    if st.sidebar.button("☁️ Connect to Google Cloud", type="primary"):
         if not project_id.strip():
             st.sidebar.error("❌ Please enter your Google Cloud Project ID")
             return False
         
         try:
-            with st.spinner("Opening Google sign-in..."):
-                # Define OAuth scopes for Google Cloud
-                SCOPES = [
-                    'https://www.googleapis.com/auth/cloud-platform',
-                    'https://www.googleapis.com/auth/cloud-platform.projects',
-                    'https://www.googleapis.com/auth/cloud-platform.read-only'
-                ]
-                
-                # Check for client_secrets.json
-                if not os.path.exists('client_secrets.json'):
-                    st.sidebar.error("❌ client_secrets.json not found")
-                    st.sidebar.info("📋 Setup instructions:")
-                    st.sidebar.write("1. Go to [Google Cloud Console](https://console.cloud.google.com)")
-                    st.sidebar.write("2. Navigate to APIs & Services > Credentials")
-                    st.sidebar.write("3. Create OAuth 2.0 Client ID")
-                    st.sidebar.write("4. Download client_secrets.json")
-                    st.sidebar.write("5. Place in project root")
-                    return False
-                
-                # Create OAuth flow
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'client_secrets.json',
-                    scopes=SCOPES
-                )
-                
-                # Start OAuth flow (opens browser)
-                credentials = flow.run_local_server(port=0)
-                
-                # Store credentials and settings
-                st.session_state.oauth_credentials = credentials
-                st.session_state.gcp_authenticated = True
-                st.session_state.gcp_project_id = project_id
-                st.session_state.gcp_region = region
-                
-                # Get user email
-                try:
-                    from google.oauth2.credentials import Credentials
-                    from googleapiclient.discovery import build
-                    service = build('oauth2', 'v2', credentials=credentials)
-                    user_info = service.userinfo().get().execute()
-                    st.session_state.user_email = user_info.get('email', 'Unknown')
-                except:
-                    st.session_state.user_email = "Google User"
-                
-                st.sidebar.success(f"✅ Welcome, {st.session_state.user_email}!")
-                
+            with st.spinner("Connecting to Google Cloud..."):
                 # Initialize Vertex AI
                 if VERTEX_AVAILABLE:
                     try:
                         aiplatform.init(
                             project=project_id, 
                             location=region,
-                            credentials=credentials
+                            credentials=st.session_state.oauth_credentials
                         )
                         st.session_state.vertex_manager = VertexTuningManager(project_id, region)
+                        
+                        # Store project settings
+                        st.session_state.gcp_project_id = project_id
+                        st.session_state.gcp_region = region
+                        st.session_state.gcp_authenticated = True
+                        
                         st.sidebar.success("✅ Google Cloud connected!")
+                        st.rerun()
                     except Exception as e:
-                        st.sidebar.warning(f"⚠️ Vertex AI setup failed: {e}")
-                        st.sidebar.info("You can still use image labeling features")
-                
-                st.rerun()
-                
+                        st.sidebar.error(f"❌ Failed to connect: {e}")
+                        st.sidebar.info("Check your project ID and permissions")
+                else:
+                    st.sidebar.warning("⚠️ Vertex AI not available")
         except Exception as e:
-            st.sidebar.error(f"❌ Sign-in failed: {e}")
-            st.sidebar.info("Make sure you have a valid client_secrets.json file")
+            st.sidebar.error(f"❌ Connection failed: {e}")
     
     return False
 
