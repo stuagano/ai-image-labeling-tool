@@ -26,11 +26,16 @@ def run_fastapi_server():
 def run_streamlit_app():
     """Run the Streamlit app"""
     print("🌐 Starting Streamlit app...")
+    
+    # Get port from environment or use default
+    streamlit_port = os.getenv("STREAMLIT_PORT", "8501")
+    streamlit_address = os.getenv("STREAMLIT_ADDRESS", "localhost")
+    
     try:
         subprocess.run([
             sys.executable, "-m", "streamlit", "run", "app_local.py",
-            "--server.port", "8501",
-            "--server.address", "localhost"
+            "--server.port", streamlit_port,
+            "--server.address", streamlit_address
         ], check=True)
     except KeyboardInterrupt:
         print("\n🛑 Streamlit app stopped")
@@ -91,9 +96,13 @@ def main():
         print("Continuing anyway...")
     
     print("✅ All checks passed!")
+    # Get port from environment or use default
+    streamlit_port = os.getenv("STREAMLIT_PORT", "8501")
+    streamlit_address = os.getenv("STREAMLIT_ADDRESS", "localhost")
+    
     print("\n📋 Services:")
     print("  • FastAPI Server: http://localhost:8000")
-    print("  • Streamlit App:  http://localhost:8501")
+    print(f"  • Streamlit App:  http://{streamlit_address}:{streamlit_port}")
     print("  • API Docs:       http://localhost:8000/docs")
     print("\n🔄 Starting services...")
     
