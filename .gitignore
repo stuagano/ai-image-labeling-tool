@@ -65,9 +65,11 @@ logs/
 *.onnx
 *.tflite
 
-# API keys (if stored locally)
+# API keys and OAuth credentials (if stored locally)
 api_keys.txt
 secrets.json
+client_secrets.json
+*.json.key
 
 # Local storage and development files
 local_annotations/

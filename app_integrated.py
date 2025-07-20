@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import json
 import tempfile
+import webbrowser
 from typing import List, Dict, Optional
 from streamlit_img_label import st_img_label
 from streamlit_img_label.manage import ImageDirManager
@@ -31,6 +32,17 @@ except ImportError:
     GEMINI_AVAILABLE = False
     st.warning("Gemini components not available. Install with: pip install google-generativeai")
 
+# Google OAuth imports
+try:
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from google.oauth2 import service_account
+    OAUTH_AVAILABLE = True
+except ImportError:
+    OAUTH_AVAILABLE = False
+    st.warning("Google OAuth not available. Install with: pip install google-auth-oauthlib")
+
 def initialize_session_state():
     """Initialize session state variables"""
     if "gcp_authenticated" not in st.session_state:
@@ -47,11 +59,27 @@ def initialize_session_state():
         st.session_state.ai_assistant = None
     if "gemini_model" not in st.session_state:
         st.session_state.gemini_model = None
+    if "oauth_credentials" not in st.session_state:
+        st.session_state.oauth_credentials = None
+    if "oauth_flow" not in st.session_state:
+        st.session_state.oauth_flow = None
+    if "user_email" not in st.session_state:
+        st.session_state.user_email = None
 
 def setup_gcp_authentication():
     """Setup GCP authentication in sidebar"""
     st.sidebar.write("---")
     st.sidebar.write("**☁️ GCP Authentication**")
+    
+    # Show current authentication status
+    if st.session_state.gcp_authenticated:
+        st.sidebar.success(f"✅ Authenticated as: {st.session_state.user_email or 'Service Account'}")
+        if st.sidebar.button("🔓 Logout"):
+            st.session_state.gcp_authenticated = False
+            st.session_state.oauth_credentials = None
+            st.session_state.user_email = None
+            st.session_state.vertex_manager = None
+            st.rerun()
     
     # Project ID
     project_id = st.sidebar.text_input(
@@ -71,11 +99,66 @@ def setup_gcp_authentication():
     # Authentication method
     auth_method = st.sidebar.selectbox(
         "Authentication Method",
-        ["Service Account Key", "Application Default Credentials", "OAuth 2.0"],
+        ["Google Account (OAuth 2.0)", "Service Account Key", "Application Default Credentials"],
         help="Choose how to authenticate with GCP"
     )
     
-    if auth_method == "Service Account Key":
+    if auth_method == "Google Account (OAuth 2.0)":
+        if not OAUTH_AVAILABLE:
+            st.sidebar.error("❌ OAuth not available. Install with: pip install google-auth-oauthlib")
+            return False
+        
+        # OAuth 2.0 flow
+        if not st.session_state.gcp_authenticated:
+            if st.sidebar.button("🔐 Sign in with Google"):
+                try:
+                    # Define OAuth scopes
+                    SCOPES = [
+                        'https://www.googleapis.com/auth/cloud-platform',
+                        'https://www.googleapis.com/auth/cloud-platform.projects',
+                        'https://www.googleapis.com/auth/cloud-platform.read-only'
+                    ]
+                    
+                    # Create OAuth flow
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        'client_secrets.json',  # You'll need to create this
+                        scopes=SCOPES
+                    )
+                    
+                    # Start OAuth flow
+                    credentials = flow.run_local_server(port=0)
+                    
+                    # Store credentials
+                    st.session_state.oauth_credentials = credentials
+                    st.session_state.gcp_authenticated = True
+                    st.session_state.gcp_project_id = project_id
+                    st.session_state.gcp_region = region
+                    
+                    # Get user info
+                    try:
+                        from google.oauth2.credentials import Credentials
+                        from googleapiclient.discovery import build
+                        service = build('oauth2', 'v2', credentials=credentials)
+                        user_info = service.userinfo().get().execute()
+                        st.session_state.user_email = user_info.get('email', 'Unknown')
+                    except:
+                        st.session_state.user_email = "OAuth User"
+                    
+                    st.sidebar.success(f"✅ Authenticated as: {st.session_state.user_email}")
+                    st.rerun()
+                    
+                except FileNotFoundError:
+                    st.sidebar.error("❌ client_secrets.json not found. Please download from Google Cloud Console.")
+                    st.sidebar.info("📋 To set up OAuth:")
+                    st.sidebar.write("1. Go to Google Cloud Console")
+                    st.sidebar.write("2. Enable OAuth 2.0 API")
+                    st.sidebar.write("3. Create OAuth 2.0 credentials")
+                    st.sidebar.write("4. Download client_secrets.json")
+                    st.sidebar.write("5. Place in project root")
+                except Exception as e:
+                    st.sidebar.error(f"❌ OAuth authentication failed: {e}")
+    
+    elif auth_method == "Service Account Key":
         uploaded_file = st.sidebar.file_uploader(
             "Upload Service Account Key (JSON)",
             type=['json'],
@@ -94,6 +177,7 @@ def setup_gcp_authentication():
                 st.session_state.gcp_authenticated = True
                 st.session_state.gcp_project_id = project_id
                 st.session_state.gcp_region = region
+                st.session_state.user_email = "Service Account"
                 st.sidebar.success("✅ GCP authenticated successfully!")
                 
                 # Clean up temp file
@@ -111,15 +195,31 @@ def setup_gcp_authentication():
                     st.session_state.gcp_authenticated = True
                     st.session_state.gcp_project_id = project_id
                     st.session_state.gcp_region = region
+                    st.session_state.user_email = "Application Default"
                     st.sidebar.success("✅ GCP authenticated successfully!")
                 else:
                     st.sidebar.error("❌ Vertex AI not available")
             except Exception as e:
                 st.sidebar.error(f"❌ Authentication failed: {e}")
     
-    elif auth_method == "OAuth 2.0":
-        st.sidebar.info("🔧 OAuth 2.0 setup coming soon...")
-        st.sidebar.write("For now, use Service Account Key or Application Default Credentials")
+    # Initialize Vertex Manager if authenticated
+    if st.session_state.gcp_authenticated and st.session_state.vertex_manager is None:
+        try:
+            if VERTEX_AVAILABLE:
+                # Use OAuth credentials if available
+                if st.session_state.oauth_credentials:
+                    aiplatform.init(
+                        project=project_id, 
+                        location=region,
+                        credentials=st.session_state.oauth_credentials
+                    )
+                else:
+                    aiplatform.init(project=project_id, location=region)
+                
+                st.session_state.vertex_manager = VertexTuningManager(project_id, region)
+                st.sidebar.success("✅ Vertex AI Manager initialized!")
+        except Exception as e:
+            st.sidebar.error(f"❌ Vertex AI initialization failed: {e}")
     
     return st.session_state.gcp_authenticated
 

@@ -21,3 +21,5 @@ python-multipart
 google-cloud-aiplatform
 pandas
 tensorflow
+google-auth-oauthlib
+google-api-python-client
