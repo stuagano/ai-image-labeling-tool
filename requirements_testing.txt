@@ -1,0 +1,7 @@
+# Testing dependencies for functional testing
+selenium>=4.0.0
+requests>=2.25.0
+webdriver-manager>=3.8.0
+
+# Optional: for better Chrome driver management
+chromedriver-autoinstaller>=0.6.0 
