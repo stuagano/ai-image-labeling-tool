@@ -51,9 +51,8 @@ def main():
         "--server.address", args.address
     ]
     
-    # Add config file if it exists
-    if os.path.exists(args.config):
-        cmd.extend(["--config", args.config])
+    # Note: Streamlit config is automatically loaded from .streamlit/config.toml
+    # No need to pass --config flag as it's not supported in this version
     
     try:
         print(f"🚀 Starting integrated app on http://{args.address}:{args.port}")
