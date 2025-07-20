@@ -20,6 +20,13 @@ import datetime
 from cloud_storage_manager import CloudStorageManager, CloudImageManager
 from local_storage_manager import LocalStorageManager, LocalImageManager
 
+# Import Vertex AI modules
+try:
+    from vertex_tuning_manager import VertexTuningManager
+    VERTEX_AVAILABLE = True
+except ImportError:
+    VERTEX_AVAILABLE = False
+
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -76,10 +83,11 @@ cloud_storage = None
 cloud_manager = None
 local_storage = None
 local_manager = None
+vertex_manager = None
 
 def initialize_storage():
     """Initialize storage connection (cloud or local)"""
-    global cloud_storage, cloud_manager, local_storage, local_manager
+    global cloud_storage, cloud_manager, local_storage, local_manager, vertex_manager
     
     # Try cloud storage first
     try:
@@ -88,6 +96,18 @@ def initialize_storage():
             cloud_storage = CloudStorageManager(bucket_name)
             cloud_manager = CloudImageManager(cloud_storage)
             print("✅ Cloud storage initialized")
+            
+            # Initialize Vertex AI if available
+            if VERTEX_AVAILABLE:
+                try:
+                    project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
+                    if project_id:
+                        vertex_manager = VertexTuningManager(project_id)
+                        vertex_manager.set_storage_bucket(bucket_name)
+                        print("✅ Vertex AI initialized")
+                except Exception as e:
+                    print(f"Failed to initialize Vertex AI: {e}")
+            
             return True
     except Exception as e:
         print(f"Failed to initialize cloud storage: {e}")
@@ -440,6 +460,215 @@ async def get_statistics():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Statistics failed: {str(e)}")
+
+# Vertex AI Endpoints
+class VertexDatasetRequest(BaseModel):
+    dataset_name: str
+    train_split: float = 0.8
+    min_images_per_class: int = 10
+    max_classes: int = 50
+
+class VertexTrainingRequest(BaseModel):
+    job_name: str
+    training_type: str = "AutoML"  # "AutoML" or "Custom"
+    model_type: str = "efficientnet"
+    budget_hours: int = 8
+    epochs: int = 50
+    learning_rate: float = 0.001
+
+class VertexDeployRequest(BaseModel):
+    model_name: str
+    endpoint_name: str
+    machine_type: str = "n1-standard-2"
+
+@app.post("/vertex/prepare-dataset")
+async def prepare_vertex_dataset(request: VertexDatasetRequest):
+    """Prepare classification dataset for Vertex AI training"""
+    if not vertex_manager:
+        raise HTTPException(status_code=500, detail="Vertex AI not initialized")
+    
+    try:
+        # Get annotations from storage
+        annotations = []
+        if cloud_manager:
+            annotations = cloud_manager.list_annotations()
+        elif local_manager:
+            annotations = local_manager.list_annotations()
+        else:
+            raise HTTPException(status_code=500, detail="No storage available")
+        
+        if not annotations:
+            raise HTTPException(status_code=404, detail="No annotations found")
+        
+        # Prepare dataset
+        dataset_paths = vertex_manager.prepare_classification_dataset(
+            annotations,
+            output_dir=f"datasets/{request.dataset_name}"
+        )
+        
+        return {
+            "status": "success",
+            "message": "Dataset prepared successfully",
+            "dataset_info": dataset_paths,
+            "annotation_count": len(annotations)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Dataset preparation failed: {str(e)}")
+
+@app.post("/vertex/upload-dataset")
+async def upload_vertex_dataset(dataset_name: str):
+    """Upload prepared dataset to Google Cloud Storage"""
+    if not vertex_manager:
+        raise HTTPException(status_code=500, detail="Vertex AI not initialized")
+    
+    try:
+        dataset_paths = {
+            'dataset_info': f"datasets/{dataset_name}/dataset_info.json",
+            'train_csv': f"datasets/{dataset_name}/train.csv",
+            'validation_csv': f"datasets/{dataset_name}/validation.csv"
+        }
+        
+        gcs_paths = vertex_manager.upload_dataset_to_gcs(dataset_paths)
+        
+        return {
+            "status": "success",
+            "message": "Dataset uploaded to GCS successfully",
+            "gcs_paths": gcs_paths
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Dataset upload failed: {str(e)}")
+
+@app.post("/vertex/create-training-job")
+async def create_vertex_training_job(request: VertexTrainingRequest):
+    """Create a training job on Vertex AI"""
+    if not vertex_manager:
+        raise HTTPException(status_code=500, detail="Vertex AI not initialized")
+    
+    try:
+        # For now, we'll use a mock dataset path - in production, this would come from the dataset preparation
+        dataset_gcs_paths = {
+            'train_csv': f"gs://{os.getenv('GCS_BUCKET_NAME')}/datasets/{request.job_name}/train.csv",
+            'validation_csv': f"gs://{os.getenv('GCS_BUCKET_NAME')}/datasets/{request.job_name}/validation.csv"
+        }
+        
+        if request.training_type == "AutoML":
+            job_info = vertex_manager.create_automl_training_job(
+                dataset_gcs_paths,
+                request.job_name,
+                budget_milli_node_hours=request.budget_hours * 1000
+            )
+        else:
+            hyperparameters = {
+                'epochs': request.epochs,
+                'learning_rate': request.learning_rate,
+                'model_type': request.model_type
+            }
+            
+            job_info = vertex_manager.create_custom_training_job(
+                dataset_gcs_paths,
+                request.job_name,
+                model_type=request.model_type,
+                hyperparameters=hyperparameters
+            )
+        
+        return {
+            "status": "success",
+            "message": f"Training job '{request.job_name}' created successfully",
+            "job_info": job_info
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Training job creation failed: {str(e)}")
+
+@app.get("/vertex/training-jobs")
+async def list_vertex_training_jobs():
+    """List all training jobs"""
+    if not vertex_manager:
+        raise HTTPException(status_code=500, detail="Vertex AI not initialized")
+    
+    try:
+        jobs = vertex_manager.list_training_jobs()
+        
+        return {
+            "status": "success",
+            "jobs": jobs,
+            "count": len(jobs)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list training jobs: {str(e)}")
+
+@app.get("/vertex/models")
+async def list_vertex_models():
+    """List all trained models"""
+    if not vertex_manager:
+        raise HTTPException(status_code=500, detail="Vertex AI not initialized")
+    
+    try:
+        models = vertex_manager.list_models()
+        
+        return {
+            "status": "success",
+            "models": models,
+            "count": len(models)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list models: {str(e)}")
+
+@app.post("/vertex/deploy-model")
+async def deploy_vertex_model(request: VertexDeployRequest):
+    """Deploy a trained model to an endpoint"""
+    if not vertex_manager:
+        raise HTTPException(status_code=500, detail="Vertex AI not initialized")
+    
+    try:
+        # Get the model by name
+        models = vertex_manager.list_models()
+        model = None
+        for m in models:
+            if m['name'] == request.model_name:
+                model = m
+                break
+        
+        if not model:
+            raise HTTPException(status_code=404, detail="Model not found")
+        
+        # Deploy model
+        endpoint_info = vertex_manager.deploy_model_to_endpoint(
+            model,
+            request.endpoint_name,
+            machine_type=request.machine_type
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Model deployed to endpoint '{request.endpoint_name}'",
+            "endpoint_info": endpoint_info
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model deployment failed: {str(e)}")
+
+@app.get("/vertex/endpoints")
+async def list_vertex_endpoints():
+    """List all deployed endpoints"""
+    if not vertex_manager:
+        raise HTTPException(status_code=500, detail="Vertex AI not initialized")
+    
+    try:
+        endpoints = vertex_manager.list_endpoints()
+        
+        return {
+            "status": "success",
+            "endpoints": endpoints,
+            "count": len(endpoints)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list endpoints: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

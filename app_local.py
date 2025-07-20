@@ -178,7 +178,7 @@ def main():
     health = st.session_state.api_client.health_check()
     if health.get('status') != 'healthy':
         st.error(f"⚠️ FastAPI server not connected: {health.get('error', 'Unknown error')}")
-        st.info("Please start the FastAPI server: `python api_server.py`")
+        st.info("Please start the FastAPI server: `111python api_server.py`")
         st.stop()
     else:
         st.success(f"✅ Connected to FastAPI server at {API_BASE_URL}")
