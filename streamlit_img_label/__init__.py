@@ -40,8 +40,34 @@ def st_img_label(img, box_color="red", rects=None, key=None):
     list
         List of rectangles with coordinates and labels
     """
+    # Convert PIL Image to numpy array and then to the format expected by frontend
+    import numpy as np
+    
+    # Convert PIL Image to RGB if it's not already
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+    
+    # Convert to numpy array
+    img_array = np.array(img)
+    
+    # Get dimensions
+    canvas_height, canvas_width = img_array.shape[:2]
+    
+    # Flatten the array to match frontend expectations
+    # Frontend expects RGBA format, so we need to add alpha channel
+    if img_array.shape[2] == 3:
+        # Add alpha channel (255 for fully opaque)
+        rgba_array = np.zeros((canvas_height, canvas_width, 4), dtype=np.uint8)
+        rgba_array[:, :, :3] = img_array
+        rgba_array[:, :, 3] = 255
+        image_data = rgba_array.flatten().tolist()
+    else:
+        image_data = img_array.flatten().tolist()
+    
     component_value = _component_func(
-        img=img,
+        canvasWidth=canvas_width,
+        canvasHeight=canvas_height,
+        imageData=image_data,
         box_color=box_color,
         rects=rects or [],
         key=key,
